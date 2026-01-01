@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+motor
+pydantic
+pydantic-settings
+python-dotenv
+redis
+boto3
+yt-dlp
+ffmpeg-python
+streamlit
+requests
