@@ -1,8 +1,8 @@
 from fastapi import APIRouter,HTTPException
-from app.api.v1.schemas import ClipRequest
-from app.services.job_service import create_clip_job
+from .schemas import ClipRequest
+from ...services.job_service import create_clip_job
 from bson import ObjectId
-from app.db.mongodb import db
+from ...db.mongodb import db
 
 router = APIRouter()
 

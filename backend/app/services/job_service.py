@@ -1,6 +1,6 @@
-from app.db.mongodb import db
-from app.models.clip_job import ClipJob
-from app.queue.redis import redis_client, QUEUE_NAME  
+from ..db.mongodb import db
+from ..models.clip_job import ClipJob
+from ..queue.redis import redis_client, QUEUE_NAME  
 
 async def create_clip_job(data: dict) -> str:
     job = ClipJob(

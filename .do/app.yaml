@@ -1,0 +1,95 @@
+name: youtube-clipper
+region: sgp
+
+services:
+  - name: backend
+    dockerfile_path: backend/Dockerfile
+    source_dir: /
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /
+    envs:
+      - key: APP_ENV
+        value: production
+      - key: APP_NAME
+        value: YouTube Clipper API
+      - key: APP_VERSION
+        value: 1.0.0
+      - key: MONGODB_URI
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: REDIS_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_BUCKET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_REGION
+        value: sgp1
+      - key: SPACES_ENDPOINT
+        value: https://sgp1.digitaloceanspaces.com
+      - key: ALLOWED_ORIGINS
+        value: https://frontend.example.com
+      - key: SIGNED_URL_TTL_SECONDS
+        value: "3600"
+
+  - name: worker
+    dockerfile_path: worker/Dockerfile
+    source_dir: /
+    http_port: 8001
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /
+    envs:
+      - key: MONGODB_URI
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: REDIS_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_BUCKET
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: SPACES_REGION
+        value: sgp1
+      - key: SPACES_ENDPOINT
+        value: https://sgp1.digitaloceanspaces.com
+      - key: SIGNED_URL_TTL_SECONDS
+        value: "3600"
+
+  - name: frontend
+    dockerfile_path: frontend/Dockerfile
+    source_dir: /
+    http_port: 8501
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /
+    envs:
+      - key: API_BASE_URL
+        value: https://backend.example.com/api/v1

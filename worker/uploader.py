@@ -1,21 +1,15 @@
 import boto3
-import os
 from botocore.client import Config
-
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.getenv("AWS_REGION")
-AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
-AWS_S3_ENDPOINT = os.getenv("AWS_S3_ENDPOINT")
+from worker.config import settings
 
 session = boto3.session.Session()
 
 s3_client = session.client(
     "s3",
-    region_name=AWS_REGION,
-    endpoint_url=AWS_S3_ENDPOINT,
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region_name=settings.STORAGE_REGION,
+    endpoint_url=settings.STORAGE_ENDPOINT,
+    aws_access_key_id=settings.STORAGE_ACCESS_KEY,
+    aws_secret_access_key=settings.STORAGE_SECRET_KEY,
     config=Config(signature_version="s3v4")
 )
 
@@ -25,7 +19,7 @@ def upload_clip(local_path: str, job_id: str) -> str:
 
     s3_client.upload_file(
         Filename=local_path,
-        Bucket=AWS_S3_BUCKET,
+        Bucket=settings.STORAGE_BUCKET,
         Key=object_key,
         ExtraArgs={
             "ContentType": "video/mp4"
@@ -40,10 +34,10 @@ def generate_signed_url(object_key: str, expires_in: int = 3600) -> str:
     url = s3_client.generate_presigned_url(
         ClientMethod="get_object",
         Params={
-            "Bucket": AWS_S3_BUCKET,
+            "Bucket": settings.STORAGE_BUCKET,
             "Key": object_key
         },
-        ExpiresIn=expires_in
+        ExpiresIn=expires_in or settings.SIGNED_URL_TTL_SECONDS
     )
 
     return url

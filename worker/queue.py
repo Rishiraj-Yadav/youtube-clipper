@@ -1,10 +1,9 @@
 # worker/queue.py
-import os
 import asyncio
 from redis import asyncio as aioredis
 from worker.job_handler import process_job
+from worker.config import REDIS_URL
 
-REDIS_URL = os.getenv("REDIS_URL")
 if not REDIS_URL:
     raise RuntimeError("REDIS_URL is not set")
 
