@@ -89,7 +89,13 @@ def render_yt_clipper() -> None:
                 )
 
             if response.status_code != 200:
-                st.error("Failed to create clip job")
+                detail = response.text
+                try:
+                    payload = response.json()
+                    detail = payload.get("detail", detail)
+                except Exception:
+                    pass
+                st.error(f"Failed to create clip job ({response.status_code}): {detail}")
             else:
                 job_id = response.json()["job_id"]
                 st.session_state["job_id"] = job_id

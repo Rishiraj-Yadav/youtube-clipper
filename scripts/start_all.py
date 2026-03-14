@@ -47,7 +47,9 @@ def main() -> int:
     if worker_port in {frontend_port, backend_port}:
         worker_port = max(frontend_port, backend_port) + 1
 
-    env.setdefault("API_BASE_URL", f"http://127.0.0.1:{backend_port}/api/v1")
+    # In all-in-one mode frontend must call backend over internal localhost,
+    # regardless of external env values configured on the platform.
+    env["API_BASE_URL"] = f"http://127.0.0.1:{backend_port}/api/v1"
 
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
