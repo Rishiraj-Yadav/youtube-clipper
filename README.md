@@ -108,3 +108,9 @@ What it starts
 Notes
 - This mode is convenient for simple deployment and demos.
 - For production scale/reliability, separate services are still recommended.
+- On platforms that provide a `PORT` env var (for example Render), the frontend binds to that public port automatically and backend/worker run on internal ports.
+
+Render Quick Fix If Root URL Shows API JSON
+- Make sure the service uses the root `Dockerfile` (not `backend/Dockerfile`).
+- Redeploy after pushing latest code.
+- If needed, use included `render.yaml` so Render selects the correct Dockerfile.

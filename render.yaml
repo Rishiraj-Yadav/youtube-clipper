@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: youtube-clipper
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: API_BASE_URL
+        # If API_BASE_URL is not set, start_all.py auto-points frontend to in-container backend.
+        sync: false

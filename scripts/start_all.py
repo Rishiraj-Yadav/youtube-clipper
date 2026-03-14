@@ -35,7 +35,19 @@ def _handle_signal(signum, frame):
 
 def main() -> int:
     env = os.environ.copy()
-    env.setdefault("API_BASE_URL", "http://localhost:8000/api/v1")
+
+    # Public port used by platforms like Render; frontend should bind here.
+    frontend_port = int(env.get("PORT", "8501"))
+    backend_port = int(env.get("BACKEND_PORT", "8000"))
+    worker_port = int(env.get("WORKER_PORT", "8001"))
+
+    # Prevent accidental port collisions.
+    if backend_port == frontend_port:
+        backend_port = frontend_port + 1
+    if worker_port in {frontend_port, backend_port}:
+        worker_port = max(frontend_port, backend_port) + 1
+
+    env.setdefault("API_BASE_URL", f"http://127.0.0.1:{backend_port}/api/v1")
 
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
@@ -48,7 +60,7 @@ def main() -> int:
         "--host",
         "0.0.0.0",
         "--port",
-        "8000",
+        str(backend_port),
     ]
 
     worker_cmd = [
@@ -59,7 +71,7 @@ def main() -> int:
         "--host",
         "0.0.0.0",
         "--port",
-        "8001",
+        str(worker_port),
     ]
 
     frontend_cmd = [
@@ -71,7 +83,7 @@ def main() -> int:
         "--server.address",
         "0.0.0.0",
         "--server.port",
-        "8501",
+        str(frontend_port),
     ]
 
     PROCESSES.append(_start(backend_cmd, env))
