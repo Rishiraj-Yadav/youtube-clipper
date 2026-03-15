@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from dotenv import load_dotenv, find_dotenv
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,19 +18,24 @@ class Settings(BaseSettings):
     MONGODB_URI: str
     REDIS_URL: str
 
-    STORAGE_BUCKET: str = Field(
+    STORAGE_BUCKET: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_BUCKET", "AWS_S3_BUCKET")
     )
-    STORAGE_ACCESS_KEY: str = Field(
+    STORAGE_ACCESS_KEY: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_ACCESS_KEY", "AWS_ACCESS_KEY_ID")
     )
-    STORAGE_SECRET_KEY: str = Field(
+    STORAGE_SECRET_KEY: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_SECRET_KEY", "AWS_SECRET_ACCESS_KEY")
     )
-    STORAGE_REGION: str = Field(
+    STORAGE_REGION: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_REGION", "AWS_REGION")
     )
-    STORAGE_ENDPOINT: str = Field(
+    STORAGE_ENDPOINT: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_ENDPOINT", "AWS_S3_ENDPOINT")
     )
 
@@ -46,3 +52,4 @@ if not MONGODB_URI:
 
 if not REDIS_URL:
     raise RuntimeError("REDIS_URL is not set")
+

@@ -23,6 +23,6 @@ async def create_clip_job(data: dict) -> str:
 
     job_id = str(result.inserted_id)
 
-    redis_client.lpush(QUEUE_NAME, job_id)
+    await redis_client.lpush(QUEUE_NAME, job_id)
 
     return job_id

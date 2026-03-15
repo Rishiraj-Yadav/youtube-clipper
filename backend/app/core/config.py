@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,19 +18,26 @@ class Settings(BaseSettings):
     REDIS_URL: str
 
     # DigitalOcean Spaces (S3 compatible) preferred names.
-    STORAGE_BUCKET: str = Field(
+    # All storage fields are Optional so a missing env var does NOT crash
+    # the backend at startup (which would cause "Failed to create clip job").
+    STORAGE_BUCKET: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_BUCKET", "AWS_S3_BUCKET")
     )
-    STORAGE_ACCESS_KEY: str = Field(
+    STORAGE_ACCESS_KEY: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_ACCESS_KEY", "AWS_ACCESS_KEY_ID")
     )
-    STORAGE_SECRET_KEY: str = Field(
+    STORAGE_SECRET_KEY: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_SECRET_KEY", "AWS_SECRET_ACCESS_KEY")
     )
-    STORAGE_REGION: str = Field(
+    STORAGE_REGION: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_REGION", "AWS_REGION")
     )
-    STORAGE_ENDPOINT: str = Field(
+    STORAGE_ENDPOINT: Optional[str] = Field(
+        default=None,
         validation_alias=AliasChoices("SPACES_ENDPOINT", "AWS_S3_ENDPOINT")
     )
 
@@ -39,7 +47,9 @@ class Settings(BaseSettings):
     @field_validator("STORAGE_ENDPOINT", mode="before")
     @classmethod
     def strip_endpoint_trailing_slash(cls, value: str) -> str:
-        return value.rstrip("/") if isinstance(value, str) else value
+        if isinstance(value, str):
+            return value.rstrip("/")
+        return value
 
     @property
     def allowed_origins_list(self) -> list[str]:

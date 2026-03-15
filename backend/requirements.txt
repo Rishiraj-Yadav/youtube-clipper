@@ -4,6 +4,7 @@ motor
 pydantic
 pydantic-settings
 python-dotenv
-redis
+redis[asyncio]
 boto3
 yt-dlp
+pymongo
