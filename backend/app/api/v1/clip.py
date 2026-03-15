@@ -1,4 +1,4 @@
-from fastapi import APIRouter,HTTPException
+from fastapi import APIRouter, HTTPException
 from .schemas import ClipRequest
 from ...services.job_service import create_clip_job
 from bson import ObjectId
@@ -7,14 +7,17 @@ from ...db.mongodb import db
 router = APIRouter()
 
 @router.post("/clip")
-async def create_clip(request : ClipRequest):
-    job_id = await create_clip_job(request.model_dump())
-    
+async def create_clip(request: ClipRequest):
+    try:
+        job_id = await create_clip_job(request.model_dump())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     return {
-        "job_id" : job_id,
-        "status" : "Pending"
+        "job_id": job_id,
+        "status": "Pending"
     }
-    
+
 @router.get("/clip/{job_id}")
 async def get_clip_status(job_id: str):
     job = await db.clip_jobs.find_one({"_id": ObjectId(job_id)})

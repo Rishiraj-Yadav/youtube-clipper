@@ -7,9 +7,11 @@ from worker.config import REDIS_URL
 if not REDIS_URL:
     raise RuntimeError("REDIS_URL is not set")
 
+# ssl_cert_reqs=None: required for DigitalOcean Managed Redis (rediss:// SSL)
 redis_client = aioredis.from_url(
     REDIS_URL,
-    decode_responses=True
+    decode_responses=True,
+    ssl_cert_reqs=None,
 )
 
 QUEUE_NAME = "clip_jobs"
