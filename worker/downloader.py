@@ -3,12 +3,10 @@ import yt_dlp
 
 COOKIES_PATH = "/etc/secrets/youtube_cookies.txt"
 
-# yt-dlp player clients to try in order.
-# tv_embedded / ios / android bypass YouTube's bot-detection challenge
-# which blocks plain web requests from datacenter IPs (e.g. Render).
-_PLAYER_CLIENTS = ["tv_embedded", "ios", "android", "web"]
+# Player clients tried one-by-one. ios/tv_embedded bypass bot-detection on
+# datacenter IPs (Render). We fall through to the next on failure.
+_PLAYER_CLIENTS = ["ios", "tv_embedded", "android", "mweb", "web"]
 
-# A realistic browser User-Agent reduces bot-detection probability.
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -16,40 +14,73 @@ _USER_AGENT = (
 )
 
 
-def _build_base_opts() -> dict:
-    """
-    Return base yt-dlp options.
-    - Uses cookies file if it exists on Render (Secret File).
-    - Uses mobile/TV player clients to bypass bot-detection on server IPs.
-    """
+def _cookies_available() -> bool:
+    """Check cookies file and print diagnostic info for Render logs."""
+    if os.path.isfile(COOKIES_PATH):
+        size = os.path.getsize(COOKIES_PATH)
+        print(f"[downloader] Cookies found: {COOKIES_PATH} ({size} bytes)")
+        return True
+    print(f"[downloader] No cookies at {COOKIES_PATH} — bot detection likely")
+    return False
+
+
+def _build_opts(player_client: str, have_cookies: bool) -> dict:
+    """Return yt-dlp options for one player client attempt."""
     opts = {
         "extractor_args": {
             "youtube": {
-                "player_client": _PLAYER_CLIENTS,
+                "player_client": [player_client],
             }
         },
         "http_headers": {
             "User-Agent": _USER_AGENT,
         },
+        "quiet": True,
+        "no_warnings": True,
     }
-    if os.path.isfile(COOKIES_PATH):
+    if have_cookies:
         opts["cookies"] = COOKIES_PATH
     return opts
 
 
+def _try_each_client(youtube_url: str, extra_opts: dict) -> dict:
+    """
+    Try every player client in sequence.
+    Returns the yt-dlp info dict from the first successful attempt.
+    Raises RuntimeError if all clients fail.
+    """
+    have_cookies = _cookies_available()
+    skip = extra_opts.get("skip_download", False)
+    last_error = None
+
+    for client in _PLAYER_CLIENTS:
+        opts = {**_build_opts(client, have_cookies), **extra_opts}
+        try:
+            print(f"[downloader] Trying player_client={client}")
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=not skip)
+            print(f"[downloader] Success with player_client={client}")
+            return info
+        except Exception as exc:
+            print(f"[downloader] player_client={client} failed: {str(exc)[:200]}")
+            last_error = exc
+
+    cookies_hint = (
+        "Cookies loaded: yes"
+        if have_cookies
+        else "Cookies NOT loaded — add youtube_cookies.txt as a Render Secret File"
+    )
+    raise RuntimeError(
+        f"All {len(_PLAYER_CLIENTS)} player clients failed. "
+        f"{cookies_hint}. Last error: {last_error}"
+    )
+
+
 def fetch_video_metadata(youtube_url: str) -> dict:
-    ydl_opts = {
-        **_build_base_opts(),
-        "quiet": True,
-        "skip_download": True,
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(youtube_url, download=False)
-
+    info = _try_each_client(youtube_url, {"skip_download": True})
     return {
         "duration": info.get("duration"),
-        "title": info.get("title")
+        "title": info.get("title"),
     }
 
 
@@ -57,18 +88,10 @@ def download_video(youtube_url: str, output_dir: str) -> str:
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, "input.mp4")
 
-    ydl_opts = {
-        **_build_base_opts(),
-        # Prefer mp4 video + m4a audio. Falls back to any available mp4.
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best",
+    _try_each_client(youtube_url, {
+        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
         "outtmpl": output_path,
         "merge_output_format": "mp4",
-        "quiet": True,
-        "no_warnings": True,
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([youtube_url])
+    })
 
     return output_path
-

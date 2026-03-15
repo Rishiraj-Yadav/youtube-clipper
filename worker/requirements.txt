@@ -6,6 +6,6 @@ pydantic-settings
 python-dotenv
 redis[asyncio]
 boto3
-yt-dlp
+yt-dlp>=2024.3.10
 ffmpeg-python
 pymongo
