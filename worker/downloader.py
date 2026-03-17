@@ -72,11 +72,6 @@ def _build_opts(player_client: str, cookies_path: str) -> dict:
     }
     if cookies_path:
         opts["cookies"] = cookies_path
-        
-    proxy_url = os.environ.get("YOUTUBE_PROXY")
-    if proxy_url:
-        opts["proxy"] = proxy_url
-        
     return opts
 
 
