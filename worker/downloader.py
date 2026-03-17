@@ -1,7 +1,9 @@
 import os
+import tempfile
 import yt_dlp
 
 COOKIES_PATH = "/etc/secrets/youtube_cookies.txt"
+TEMP_COOKIES_PATH = os.path.join(tempfile.gettempdir(), "yt_cookies.txt")
 
 # Player clients tried one-by-one. ios/tv_embedded bypass bot-detection on
 # datacenter IPs (Render). We fall through to the next on failure.
@@ -14,17 +16,47 @@ _USER_AGENT = (
 )
 
 
-def _cookies_available() -> bool:
-    """Check cookies file and print diagnostic info for Render logs."""
+def _get_cookies_path():
+    """Return the path to a valid cookies file, or None if not found."""
+    # 1. Check if user passed cookies via environment variable (useful on Render/Heroku)
+    cookies_env = os.environ.get("YOUTUBE_COOKIES_CONTENT")
+    if cookies_env:
+        with open(TEMP_COOKIES_PATH, "w", encoding="utf-8") as f:
+            f.write(cookies_env)
+        return TEMP_COOKIES_PATH
+
+    # 2. Check the default specific Render secret file
     if os.path.isfile(COOKIES_PATH):
-        size = os.path.getsize(COOKIES_PATH)
-        print(f"[downloader] Cookies found: {COOKIES_PATH} ({size} bytes)")
-        return True
-    print(f"[downloader] No cookies at {COOKIES_PATH} — bot detection likely")
-    return False
+        return COOKIES_PATH
+
+    # 3. Check for ANY .txt file in /etc/secrets that looks like a cookie file
+    # This helps if the user named the secret file e.g., "youtube.com_cookies.txt.txt"
+    if os.path.isdir("/etc/secrets"):
+        for fname in os.listdir("/etc/secrets"):
+            if fname.endswith(".txt"):
+                fpath = os.path.join("/etc/secrets", fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        if "# Netscape HTTP Cookie File" in f.read(100):
+                            return fpath
+                except Exception:
+                    continue
+
+    return None
 
 
-def _build_opts(player_client: str, have_cookies: bool) -> dict:
+def _cookies_available() -> str:
+    """Check cookies file and return path to it if found, else None."""
+    path = _get_cookies_path()
+    if path and os.path.isfile(path):
+        size = os.path.getsize(path)
+        print(f"[downloader] Cookies found: {path} ({size} bytes)")
+        return path
+    print("[downloader] No cookies found — bot detection likely")
+    return None
+
+
+def _build_opts(player_client: str, cookies_path: str) -> dict:
     """Return yt-dlp options for one player client attempt."""
     opts = {
         "extractor_args": {
@@ -38,8 +70,8 @@ def _build_opts(player_client: str, have_cookies: bool) -> dict:
         "quiet": True,
         "no_warnings": True,
     }
-    if have_cookies:
-        opts["cookies"] = COOKIES_PATH
+    if cookies_path:
+        opts["cookies"] = cookies_path
     return opts
 
 
@@ -49,12 +81,12 @@ def _try_each_client(youtube_url: str, extra_opts: dict) -> dict:
     Returns the yt-dlp info dict from the first successful attempt.
     Raises RuntimeError if all clients fail.
     """
-    have_cookies = _cookies_available()
+    cookies_path = _cookies_available()
     skip = extra_opts.get("skip_download", False)
     last_error = None
 
     for client in _PLAYER_CLIENTS:
-        opts = {**_build_opts(client, have_cookies), **extra_opts}
+        opts = {**_build_opts(client, cookies_path), **extra_opts}
         try:
             print(f"[downloader] Trying player_client={client}")
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -67,8 +99,8 @@ def _try_each_client(youtube_url: str, extra_opts: dict) -> dict:
 
     cookies_hint = (
         "Cookies loaded: yes"
-        if have_cookies
-        else "Cookies NOT loaded — add youtube_cookies.txt as a Render Secret File"
+        if cookies_path
+        else "Cookies NOT loaded — add youtube_cookies.txt as a Render Secret File or set YOUTUBE_COOKIES_CONTENT env var"
     )
     raise RuntimeError(
         f"All {len(_PLAYER_CLIENTS)} player clients failed. "
